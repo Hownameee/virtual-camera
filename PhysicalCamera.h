@@ -1,25 +1,29 @@
 #include <fcntl.h>
 #include "V4L2Device.h"
-#include "CameraBuffer.h"
 
 class PhysicalCamera : public V4L2Device
 {
 private:
-    size_t bufferLength;
-    void *bufferStart = nullptr;
     v4l2_memory memoryType;
+    uint8_t bufferCount;
+    void **bufferStart = nullptr;
+    int bufferIndex = -1;
+    size_t bufferMax;
+    size_t bufferSize = 0;
 
 public:
-    PhysicalCamera() : V4L2Device(V4L2_BUF_TYPE_VIDEO_CAPTURE) {
+    PhysicalCamera() : V4L2Device(V4L2_BUF_TYPE_VIDEO_CAPTURE)
+    {
         memoryType = V4L2_MEMORY_MMAP;
     }
     bool openDevice(const char *, int flags = O_RDWR) override;
-    
-    void* getFrame();
-    size_t getFrameSize();
+
+    void *getFrame();
+    size_t getBufferSize();
+    size_t getBufferMaxSize();
 
     bool initMemory();
-    void startStreaming();
+    bool startStreaming();
     void returnBuffer();
-
+    bool setFramerate(int fps);
 };

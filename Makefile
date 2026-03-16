@@ -7,7 +7,7 @@ SRCS     := $(shell find . -name "*.cpp")
 TARGET   := main
 
 all:
-	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET)
+	$(CXX) $(CXXFLAGS) $(SRCS) -o $(TARGET) `pkg-config --cflags --libs opencv4`
 
 clean:
 	rm -f $(TARGET)
