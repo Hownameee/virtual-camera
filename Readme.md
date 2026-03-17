@@ -7,7 +7,7 @@ libopencv-dev
 v4l2loopback
 ```
 
-## Run cmd
+## CLI
 
 ```bash
  sudo rmmod v4l2loopback 
