@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     }
 
     v4l2_format fmt = pc.getFormat();
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
+    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG; // my camera just support 30fps (the highest) at mjpg format
     vc.setFormat(fmt);
 
     if (!pc.initMemory())
@@ -52,6 +52,7 @@ int main(int argc, char *argv[])
     int frameCount = 0;
     auto startTime = std::chrono::high_resolution_clock::now();
 
+    // proactive modify fps of camera
     if (!pc.setFramerate(30))
     {
         return -1;

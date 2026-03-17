@@ -12,11 +12,8 @@ public:
         cv::Mat img = cv::imdecode(rawData, cv::IMREAD_COLOR);
         if (img.empty()) return;
 
-        // --- GRAYSCALE LOGIC START ---
         cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
-        // Convert back to 3-channel BGR so the MJPEG encoder doesn't complain
         cv::cvtColor(img, img, cv::COLOR_GRAY2BGR); 
-        // --- GRAYSCALE LOGIC END ---
 
         std::vector<uchar> outBuffer;
         cv::imencode(".jpg", img, outBuffer, {cv::IMWRITE_JPEG_QUALITY, 85});
