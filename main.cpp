@@ -10,7 +10,7 @@
 
 volatile sig_atomic_t keepRunning = 1;
 
-void signalHandler(int signum)
+void signalHandler(int)
 {
     keepRunning = 0;
 }

@@ -1,6 +1,6 @@
 CXX      := g++
 
-CXXFLAGS := -O3 -march=native -std=c++17 -Wall
+CXXFLAGS := -O3 -flto -march=native -pipe -std=c++17 -Wall -Wextra
 
 SRCS     := $(shell find . -name "*.cpp")
 

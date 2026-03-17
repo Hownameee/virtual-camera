@@ -8,7 +8,7 @@ private:
     uint8_t bufferCount;
     void **bufferStart = nullptr;
     int bufferIndex = -1;
-    size_t bufferMax;
+    size_t bufferMax = 0;
     size_t bufferSize = 0;
 
 public:
