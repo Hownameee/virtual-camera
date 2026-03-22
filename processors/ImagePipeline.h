@@ -4,6 +4,8 @@
 #include <vector>
 #include <functional>
 #include <unordered_map>
+#include <iostream>
+#include <string>
 
 #include "stb_image.h"
 #include "stb_image_write.h"

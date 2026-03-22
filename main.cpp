@@ -4,12 +4,10 @@
 #include <iostream>
 #include <cstring>
 #include <csignal>
+#include <fcntl.h>
 #include "processors/ImagePipeline.h"
-#include "V4L2Device.h"
-#include "fcntl.h"
 #include "PhysicalCamera.h"
 #include "VirtualCamera.h"
-#include <chrono>
 
 volatile sig_atomic_t keepRunning = 1;
 

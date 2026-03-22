@@ -1,3 +1,5 @@
+#pragma once
+
 #include <fcntl.h>
 #include "V4L2Device.h"
 #include "ConfigCamera.h"
