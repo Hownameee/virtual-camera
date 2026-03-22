@@ -1,31 +1,42 @@
 #pragma once
 
-#include "../IImageProcess.h"
-#include <opencv2/opencv.hpp>
-#include <vector>
+#include "IImageProcess.h"
+#include <algorithm> // Needed for std::min
 
-class SepiaProcessor : public IImageProcess {
+class SepiaProcessor : public IImageProcess
+{
 public:
-    void process(void *buffer, size_t &bufferSize, size_t maxBufferSize) override {
-        if (!buffer || bufferSize == 0) return;
+    void process(unsigned char *decodedPixels, int width, int height, int channels) override
+    {
+        // Safety check: Make sure we have pixels and at least 3 channels (RGB)
+        if (!decodedPixels || width <= 0 || height <= 0 || channels < 3) {
+            return; 
+        }
 
-        cv::Mat rawData(1, bufferSize, CV_8UC1, buffer);
-        cv::Mat img = cv::imdecode(rawData, cv::IMREAD_COLOR);
-        if (img.empty()) return;
+        int totalBytes = width * height * channels;
 
-        cv::Mat sepiaKernel = (cv::Mat_<float>(3, 3) <<
-            0.272, 0.534, 0.131,
-            0.349, 0.686, 0.168,
-            0.393, 0.769, 0.189
-        );
-        
-        cv::transform(img, img, sepiaKernel);
+        // Loop through the flat array, jumping forward by the number of channels (usually 3)
+        for (int i = 0; i < totalBytes; i += channels)
+        {
+            // Extract the original RGB values
+            // (stb_image forces standard RGB order, not BGR)
+            unsigned char originalR = decodedPixels[i];
+            unsigned char originalG = decodedPixels[i + 1];
+            unsigned char originalB = decodedPixels[i + 2];
 
-        std::vector<uchar> outBuffer;
-        cv::imencode(".jpg", img, outBuffer, {cv::IMWRITE_JPEG_QUALITY, 85});
-        if (outBuffer.size() <= maxBufferSize) {
-            std::memcpy(buffer, outBuffer.data(), outBuffer.size());
-            bufferSize = outBuffer.size();
+            // Apply the standard Sepia tone math
+            int tr = static_cast<int>((originalR * 0.393f) + (originalG * 0.769f) + (originalB * 0.189f));
+            int tg = static_cast<int>((originalR * 0.349f) + (originalG * 0.686f) + (originalB * 0.168f));
+            int tb = static_cast<int>((originalR * 0.272f) + (originalG * 0.534f) + (originalB * 0.131f));
+
+            // Overwrite the original pixels. 
+            // We MUST cap the values at 255, otherwise they wrap around and cause glitchy neon pixels!
+            decodedPixels[i]     = static_cast<unsigned char>(std::min(255, tr)); // R
+            decodedPixels[i + 1] = static_cast<unsigned char>(std::min(255, tg)); // G
+            decodedPixels[i + 2] = static_cast<unsigned char>(std::min(255, tb)); // B
+            
+            // Note: If your image has an Alpha channel (channels == 4), 
+            // the loop naturally skips it because i += channels jumps right over it!
         }
     }
 };

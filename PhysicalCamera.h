@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include "V4L2Device.h"
+#include "ConfigCamera.h"
 
 class PhysicalCamera : public V4L2Device
 {
@@ -18,12 +19,15 @@ public:
     }
     bool openDevice(const char *, int flags = O_RDWR) override;
 
+    // config camera
     void *getFrame();
     size_t getBufferSize();
     size_t getBufferMaxSize();
+    bool setFramerate(int fps);
+    ConfigCamera getHighestConfig();
 
+    // stream video
     bool initMemory();
     bool startStreaming();
     void returnBuffer();
-    bool setFramerate(int fps);
 };

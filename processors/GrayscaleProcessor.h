@@ -1,25 +1,35 @@
 #pragma once
-#include "../IImageProcess.h"
-#include <opencv2/opencv.hpp>
-#include <vector>
 
-class GrayscaleProcessor : public IImageProcess {
+#include "IImageProcess.h"
+
+class GrayscaleProcessor : public IImageProcess
+{
 public:
-    void process(void *buffer, size_t &bufferSize, size_t maxBufferSize) override {
-        if (!buffer || bufferSize == 0) return;
+    void process(unsigned char *decodedPixels, int width, int height, int channels) override
+    {
+        // Safety check
+        if (!decodedPixels || width <= 0 || height <= 0 || channels < 3) {
+            return;
+        }
 
-        cv::Mat rawData(1, bufferSize, CV_8UC1, buffer);
-        cv::Mat img = cv::imdecode(rawData, cv::IMREAD_COLOR);
-        if (img.empty()) return;
+        int totalBytes = width * height * channels;
 
-        cv::cvtColor(img, img, cv::COLOR_BGR2GRAY);
-        cv::cvtColor(img, img, cv::COLOR_GRAY2BGR); 
+        // Loop through the flat array, jumping forward by the number of channels
+        for (int i = 0; i < totalBytes; i += channels)
+        {
+            unsigned char r = decodedPixels[i];
+            unsigned char g = decodedPixels[i + 1];
+            unsigned char b = decodedPixels[i + 2];
 
-        std::vector<uchar> outBuffer;
-        cv::imencode(".jpg", img, outBuffer, {cv::IMWRITE_JPEG_QUALITY, 85});
-        if (outBuffer.size() <= maxBufferSize) {
-            std::memcpy(buffer, outBuffer.data(), outBuffer.size());
-            bufferSize = outBuffer.size();
+            // Calculate luminance using human-eye-weighted math
+            // Since the weights (0.299 + 0.587 + 0.114) equal exactly 1.0, 
+            // the result will naturally stay between 0 and 255. No std::min required!
+            unsigned char gray = static_cast<unsigned char>((r * 0.299f) + (g * 0.587f) + (b * 0.114f));
+
+            // Set R, G, and B to the exact same gray value
+            decodedPixels[i]     = gray;
+            decodedPixels[i + 1] = gray;
+            decodedPixels[i + 2] = gray;
         }
     }
 };

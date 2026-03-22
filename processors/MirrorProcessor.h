@@ -1,47 +1,39 @@
 #pragma once
 
-#include "../IImageProcess.h"
-#include <opencv2/opencv.hpp>
-#include <vector>
-#include <cstring>
-#include <iostream>
+#include "IImageProcess.h"
+#include <utility> // For std::swap
 
 class MirrorProcessor : public IImageProcess
 {
 public:
-    void process(void *buffer, size_t &bufferSize, size_t maxBufferSize) override;
+    void process(unsigned char *decodedPixels, int width, int height, int channels) override
+    {
+        if (!decodedPixels || width <= 0 || height <= 0 || channels <= 0) {
+            return; // Safety check
+        }
+
+        // Calculate how many bytes make up a single horizontal row
+        int rowBytes = width * channels;
+
+        // Loop through every single row from top to bottom
+        for (int y = 0; y < height; ++y)
+        {
+            // Find the exact memory address where this row starts
+            unsigned char* rowStart = decodedPixels + (y * rowBytes);
+
+            // Loop halfway across the row to swap left and right pixels
+            for (int x = 0; x < width / 2; ++x)
+            {
+                // Calculate the byte index of the left pixel and the right pixel
+                int leftPixelIdx = x * channels;
+                int rightPixelIdx = (width - 1 - x) * channels;
+
+                // Swap the R, G, and B bytes individually
+                for (int c = 0; c < channels; ++c)
+                {
+                    std::swap(rowStart[leftPixelIdx + c], rowStart[rightPixelIdx + c]);
+                }
+            }
+        }
+    }
 };
-
-void MirrorProcessor::process(void *buffer, size_t &bufferSize, size_t maxBufferSize)
-{
-    if (!buffer || bufferSize == 0)
-    {
-        return;
-    }
-
-    cv::Mat rawData(1, bufferSize, CV_8UC1, buffer);
-    cv::Mat img = cv::imdecode(rawData, cv::IMREAD_COLOR);
-    if (img.empty())
-    {
-        std::cerr << "[ERROR] OpenCV failed to decode the MJPEG buffer.\n";
-        return;
-    }
-
-    cv::flip(img, img, 1);
-
-    std::vector<uchar> outBuffer;
-    std::vector<int> params = {cv::IMWRITE_JPEG_QUALITY, 85};
-    cv::imencode(".jpg", img, outBuffer, params);
-
-    if (outBuffer.size() <= maxBufferSize)
-    {
-        std::memcpy(buffer, outBuffer.data(), outBuffer.size());
-
-        bufferSize = outBuffer.size();
-    }
-    else
-    {
-        std::cerr << "[ERROR] Processed image (" << outBuffer.size()
-                  << " bytes) exceeds max buffer capacity (" << maxBufferSize << ").\n";
-    }
-}

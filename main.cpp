@@ -1,7 +1,10 @@
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 #include <iostream>
 #include <cstring>
 #include <csignal>
-#include "ImagePipeline.h"
+#include "processors/ImagePipeline.h"
 #include "V4L2Device.h"
 #include "fcntl.h"
 #include "PhysicalCamera.h"
@@ -13,6 +16,18 @@ volatile sig_atomic_t keepRunning = 1;
 void signalHandler(int)
 {
     keepRunning = 0;
+}
+
+void printConfig(ConfigCamera c)
+{
+    char formatStr[5] = {0};
+    *reinterpret_cast<uint32_t*>(formatStr) = c.pixelFormat;
+
+    std::cout << "\n========== Applied Camera Config ==========\n";
+    std::cout << "[Resolution]   " << c.width << " x " << c.height << "\n";
+    std::cout << "[Framerate]    " << c.fps << " FPS\n";
+    std::cout << "[Pixel Format] " << formatStr << "\n";
+    std::cout << "===========================================\n\n";
 }
 
 int main(int argc, char *argv[])
@@ -36,9 +51,24 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    v4l2_format fmt = pc.getFormat();
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG; // my camera just support 30fps (the highest) at mjpg format
+    ConfigCamera cfg = pc.getHighestConfig();
+
+    // config -> format
+    v4l2_format fmt{};
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    fmt.fmt.pix.width = cfg.width;
+    fmt.fmt.pix.height = cfg.height;
+    fmt.fmt.pix.pixelformat = cfg.pixelFormat;
+    fmt.fmt.pix.field = V4L2_FIELD_NONE;
+
+    pc.setFormat(fmt);
     vc.setFormat(fmt);
+
+    printConfig(cfg);
+
+    if (!pc.setFramerate(cfg.fps)) {
+        return -1;
+    }
 
     if (!pc.initMemory())
     {
@@ -47,16 +77,6 @@ int main(int argc, char *argv[])
 
     ImagePipeline ip;
     ip.readArgs(argc, argv);
-
-    // count fps
-    int frameCount = 0;
-    auto startTime = std::chrono::high_resolution_clock::now();
-
-    // proactive modify fps of camera
-    if (!pc.setFramerate(30))
-    {
-        return -1;
-    }
 
     if (!pc.startStreaming())
     {
@@ -72,21 +92,9 @@ int main(int argc, char *argv[])
             continue;
         }
         size_t bufferSize = pc.getBufferSize();
-        ip.processImage(frame, bufferSize, pc.getBufferMaxSize());
-        vc.writeBuffer(frame, bufferSize);
+        std::vector<uint8_t> processedBuffer = ip.process(frame, bufferSize, pc.getBufferMaxSize());
+        vc.writeBuffer(processedBuffer.data(), processedBuffer.size());
         pc.returnBuffer();
-
-        frameCount++; // We successfully processed 1 frame
-
-        // count fps step
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> elapsedTime = currentTime - startTime;
-        if (elapsedTime.count() >= 1000.0)
-        {
-            std::cout << "\r[FPS] " << frameCount << std::flush;
-            frameCount = 0;
-            startTime = currentTime;
-        }
     }
 
     std::cout << std::endl
