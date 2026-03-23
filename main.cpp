@@ -5,7 +5,7 @@
 #include <cstring>
 #include <csignal>
 #include <fcntl.h>
-#include "processors/ImagePipeline.h"
+#include "image/ImagePipeline.h"
 #include "PhysicalCamera.h"
 #include "VirtualCamera.h"
 
@@ -19,7 +19,7 @@ void signalHandler(int)
 void printConfig(ConfigCamera c)
 {
     char formatStr[5] = {0};
-    *reinterpret_cast<uint32_t*>(formatStr) = c.pixelFormat;
+    *reinterpret_cast<uint32_t *>(formatStr) = c.pixelFormat;
 
     std::cout << "\n========== Applied Camera Config ==========\n";
     std::cout << "[Resolution]   " << c.width << " x " << c.height << "\n";
@@ -64,7 +64,8 @@ int main(int argc, char *argv[])
 
     printConfig(cfg);
 
-    if (!pc.setFramerate(cfg.fps)) {
+    if (!pc.setFramerate(cfg.fps))
+    {
         return -1;
     }
 
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    ImagePipeline ip;
+    ImagePipeline ip (cfg.pixelFormat);
     ip.readArgs(argc, argv);
 
     if (!pc.startStreaming())
@@ -95,7 +96,7 @@ int main(int argc, char *argv[])
         pc.returnBuffer();
     }
 
-    std::cout << std::endl
-              << "[SUCCESS] System stopped safely.\n";
+    std::cout << std::endl;
+    std::cout << "[SUCCESS] System stopped safely.\n";
     return 0;
 }

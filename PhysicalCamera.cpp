@@ -118,58 +118,22 @@ bool PhysicalCamera::setFramerate(int fps)
     v4l2_streamparm parm{};
     parm.type = formatType;
 
-    // get current fps
-    if (ioctl(fd, VIDIOC_G_PARM, &parm) == -1)
-    {
-        std::cerr << "[ERROR] Failed to get current FPS configuration: " << strerror(errno) << "\n";
+    if (ioctl(fd, VIDIOC_G_PARM, &parm) == -1) {
+        std::cerr << "[ERROR] Failed to get stream parameters.\n";
         return false;
     }
 
-    if (!(parm.parm.capture.capability & V4L2_CAP_TIMEPERFRAME))
-    {
-        std::cerr << "[ERROR] Camera driver does not support changing the framerate.\n";
-        return false;
+    // If the camera hardware doesn't support custom framerates, just exit happily
+    if (!(parm.parm.capture.capability & V4L2_CAP_TIMEPERFRAME)) {
+        return true; 
     }
 
-    // Print current FPS
-    int current_num = parm.parm.capture.timeperframe.numerator;
-    int current_denom = parm.parm.capture.timeperframe.denominator;
-    if (current_num != 0)
-    {
-        std::cout << "[INFO] Current Camera FPS is: "
-                  << (current_denom / current_num) << "\n";
-    }
-
-    // set FPS
     parm.parm.capture.timeperframe.numerator = 1;
     parm.parm.capture.timeperframe.denominator = fps;
-    if (ioctl(fd, VIDIOC_S_PARM, &parm) == -1)
-    {
-        std::cerr << "[ERROR] ioctl failed while setting FPS: " << strerror(errno) << "\n";
+
+    if (ioctl(fd, VIDIOC_S_PARM, &parm) == -1) {
+        std::cerr << "[ERROR] Failed to set FPS.\n";
         return false;
-    }
-
-    // verify fps
-    int actual_num = parm.parm.capture.timeperframe.numerator;
-    int actual_denom = parm.parm.capture.timeperframe.denominator;
-
-    if (actual_num == 0)
-    {
-        std::cerr << "[ERROR] Driver returned an invalid numerator (0).\n";
-        return false;
-    }
-
-    int actual_fps = actual_denom / actual_num;
-
-    if (actual_fps != fps)
-    {
-        std::cout << "[WARNING] Camera does not exactly support " << fps
-                  << " FPS. Hardware automatically adjusted it to: " << actual_fps << " FPS.\n";
-        // Still returning true since the setting was successfully applied by hardware limits.
-    }
-    else
-    {
-        std::cout << "[INFO] Successfully set the Camera to " << fps << " FPS!\n";
     }
 
     return true;
@@ -181,49 +145,59 @@ ConfigCamera PhysicalCamera::getHighestConfig()
     v4l2_fmtdesc fmtdesc{};
     fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
+    // loop through config of camera, default index = 0
+    // VIDIOC_ENUM_FMT -> get pix format: mjpg, yuyv, ...
     while (ioctl(fd, VIDIOC_ENUM_FMT, &fmtdesc) == 0)
     {
-        struct v4l2_frmsizeenum frmsize;
-        memset(&frmsize, 0, sizeof(frmsize));
+        v4l2_frmsizeenum frmsize{};
         frmsize.pixel_format = fmtdesc.pixelformat;
 
+        // get size of that format
         while (ioctl(fd, VIDIOC_ENUM_FRAMESIZES, &frmsize) == 0)
         {
             if (frmsize.type == V4L2_FRMSIZE_TYPE_DISCRETE)
             {
-                uint32_t currentWidth = frmsize.discrete.width;
-                uint32_t currentHeight = frmsize.discrete.height;
-                uint32_t currentArea = currentWidth * currentHeight;
+                uint32_t currentArea = frmsize.discrete.width * frmsize.discrete.height;
+                uint32_t bestArea = bestConfig.width * bestConfig.height;
 
-                struct v4l2_frmivalenum frmival;
-                memset(&frmival, 0, sizeof(frmival));
+                // resolution first, fps second
+                if (bestArea > currentArea)
+                {
+                    frmsize.index++;
+                    continue;
+                }
+
+                if (currentArea > bestArea)
+                {
+                    bestConfig.fps = 0;
+                }
+
+                v4l2_frmivalenum frmival{};
                 frmival.pixel_format = fmtdesc.pixelformat;
-                frmival.width = currentWidth;
-                frmival.height = currentHeight;
+                frmival.width = frmsize.discrete.width;
+                frmival.height = frmsize.discrete.height;
 
+                // get frame interval or fps belong to pix format and size
                 while (ioctl(fd, VIDIOC_ENUM_FRAMEINTERVALS, &frmival) == 0)
                 {
                     if (frmival.type == V4L2_FRMIVAL_TYPE_DISCRETE)
                     {
-                        double currentFps = static_cast<double>(frmival.discrete.denominator) /
-                                            static_cast<double>(frmival.discrete.numerator);
-                        uint32_t bestArea = bestConfig.width * bestConfig.height;
-                        if ((currentArea > bestArea) ||
-                            (currentArea == bestArea && currentFps > bestConfig.fps))
+                        double currentFps = frmival.discrete.denominator * 1.0 / frmival.discrete.numerator;
+                        if (currentFps > bestConfig.fps)
                         {
-                            bestConfig.width = currentWidth;
-                            bestConfig.height = currentHeight;
+                            bestConfig.width = frmsize.discrete.width;
+                            bestConfig.height = frmsize.discrete.height;
                             bestConfig.fps = currentFps;
                             bestConfig.pixelFormat = fmtdesc.pixelformat;
                             bestConfig.formatName = reinterpret_cast<const char *>(fmtdesc.description);
                         }
                     }
-                    frmival.index++;
+                    frmival.index++; // next interval
                 }
             }
-            frmsize.index++;
+            frmsize.index++; // next frame size support
         }
-        fmtdesc.index++;
+        fmtdesc.index++; // next config
     }
     return bestConfig;
 }

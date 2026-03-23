@@ -1,9 +1,9 @@
 #pragma once
 
-class IImageProcess
+class IProcessor
 {
 public:
-    virtual ~IImageProcess() = default;
+    virtual ~IProcessor() = default;
 
     virtual void process(unsigned char *decodedPixels, int width, int height, int channels) = 0;
 };

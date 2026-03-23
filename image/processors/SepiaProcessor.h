@@ -1,9 +1,9 @@
 #pragma once
 
-#include "IImageProcess.h"
-#include <algorithm> // Needed for std::min
+#include "IProcessor.h"
+#include <algorithm>
 
-class SepiaProcessor : public IImageProcess
+class SepiaProcessor : public IProcessor
 {
 public:
     void process(unsigned char *decodedPixels, int width, int height, int channels) override

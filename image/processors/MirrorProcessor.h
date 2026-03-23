@@ -1,9 +1,9 @@
 #pragma once
 
-#include "IImageProcess.h"
+#include "IProcessor.h"
 #include <utility> // For std::swap
 
-class MirrorProcessor : public IImageProcess
+class MirrorProcessor : public IProcessor
 {
 public:
     void process(unsigned char *decodedPixels, int width, int height, int channels) override
