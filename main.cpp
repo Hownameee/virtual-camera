@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    ImagePipeline ip (cfg.pixelFormat);
+    ImagePipeline ip (cfg.pixelFormat, cfg.width, cfg.height);
     ip.readArgs(argc, argv);
 
     if (!pc.startStreaming())

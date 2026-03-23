@@ -28,9 +28,11 @@ private:
     int channels = 0;
 
 public:
-    ImagePipeline(uint32_t fmt)
+    ImagePipeline(uint32_t fmt, uint32_t width, uint32_t height)
     {
         pixelFormat = fmt;
+        this->width = width;
+        this->height = height;
     }
 
     ~ImagePipeline()
