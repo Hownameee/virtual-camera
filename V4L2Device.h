@@ -28,5 +28,5 @@ public:
     bool isOpen();
 
     v4l2_format getFormat();
-    void setFormat(v4l2_format &format);
+    bool setFormat(v4l2_format &format);
 };

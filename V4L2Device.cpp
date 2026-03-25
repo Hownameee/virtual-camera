@@ -39,18 +39,20 @@ v4l2_format V4L2Device::getFormat()
     return fmt;
 }
 
-void V4L2Device::setFormat(v4l2_format &format)
+bool V4L2Device::setFormat(v4l2_format &format)
 {
     if (!isOpen())
     {
-        return;
+        std::cerr << "Device isn't opened!" << std::endl;
+        return false;
     }
     format.type = formatType;
     if (ioctl(fd, VIDIOC_S_FMT, &format) == -1)
     {
         std::cerr << "[ERROR] VIDIOC_S_FMT failed: " << strerror(errno) << std::endl;
-        return;
+        return false;
     }
+    return true;
 }
 
 bool V4L2Device::isOpen()

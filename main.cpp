@@ -8,6 +8,7 @@
 #include "image/ImagePipeline.h"
 #include "PhysicalCamera.h"
 #include "VirtualCamera.h"
+#include "chrono"
 
 volatile sig_atomic_t keepRunning = 1;
 
@@ -59,8 +60,14 @@ int main(int argc, char *argv[])
     fmt.fmt.pix.pixelformat = cfg.pixelFormat;
     fmt.fmt.pix.field = V4L2_FIELD_NONE;
 
-    pc.setFormat(fmt);
-    vc.setFormat(fmt);
+    if (!pc.setFormat(fmt))
+    {
+        return -1;
+    }
+    if (!vc.setFormat(fmt))
+    {
+        return -1;
+    }
 
     printConfig(cfg);
 
@@ -68,13 +75,12 @@ int main(int argc, char *argv[])
     {
         return -1;
     }
-
     if (!pc.initMemory())
     {
         return -1;
     }
 
-    ImagePipeline ip (cfg.pixelFormat, cfg.width, cfg.height);
+    ImagePipeline ip(cfg.pixelFormat, cfg.width, cfg.height);
     ip.readArgs(argc, argv);
 
     if (!pc.startStreaming())
@@ -85,6 +91,8 @@ int main(int argc, char *argv[])
 
     while (keepRunning)
     {
+        auto start = std::chrono::high_resolution_clock::now();
+
         void *frame = pc.getFrame();
         if (!frame)
         {
@@ -93,6 +101,11 @@ int main(int argc, char *argv[])
         size_t bufferSize = pc.getBufferSize();
         std::vector<uint8_t> processedBuffer = ip.process(frame, bufferSize, pc.getBufferMaxSize());
         vc.writeBuffer(processedBuffer.data(), processedBuffer.size());
+
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> delay = end - start;
+        std::cout << "\r[Pipeline Delay] " << delay.count() << " ms" << std::flush;
+
         pc.returnBuffer();
     }
 
