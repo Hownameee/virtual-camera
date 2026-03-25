@@ -71,6 +71,12 @@ void ImagePipeline::decoder(void *buffer, size_t bufferSize)
         channels = 3;
         int totalPixels = width * height;
 
+        if (bufferSize < static_cast<size_t>(totalPixels * 2)) 
+        {
+            std::cerr << "[ERROR] Buffer size from kernel is too small for YUYV parsing!\n";
+            return;
+        }
+
         decodedPixels = static_cast<unsigned char *>(malloc(totalPixels * channels));
 
         auto *yuyv = static_cast<unsigned char *>(buffer);

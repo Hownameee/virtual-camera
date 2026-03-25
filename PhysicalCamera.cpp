@@ -10,6 +10,22 @@ bool PhysicalCamera::openDevice(const char *path, int flags)
     return V4L2Device::openDevice(path, flags);
 }
 
+PhysicalCamera::~PhysicalCamera()
+{
+    if (bufferStart)
+    {
+        for (uint8_t i = 0; i < bufferCount; i++)
+        {
+            if (bufferStart[i] && bufferStart[i] != MAP_FAILED)
+            {
+                munmap(bufferStart[i], bufferMax);
+            }
+        }
+        delete[] bufferStart;
+        bufferStart = nullptr;
+    }
+}
+
 bool PhysicalCamera::initMemory()
 {
     // request buffer from kernel
@@ -24,7 +40,7 @@ bool PhysicalCamera::initMemory()
     }
 
     bufferCount = rb.count;
-    bufferStart = new void *[bufferCount];
+    bufferStart = new void *[bufferCount]{};
 
     for (uint8_t i = 0; i < bufferCount; i++)
     {
@@ -85,6 +101,12 @@ void *PhysicalCamera::getFrame()
     // get buffer from kernel space
     if (ioctl(fd, VIDIOC_DQBUF, &buf) == -1)
         return nullptr;
+
+    if (buf.index >= bufferCount)
+    {
+        std::cerr << "[ERROR] Kernel returned invalid buffer index\n";
+        return nullptr;
+    }
 
     bufferIndex = buf.index;
     bufferSize = buf.bytesused;

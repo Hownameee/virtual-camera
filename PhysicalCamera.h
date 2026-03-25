@@ -19,6 +19,8 @@ public:
     {
         memoryType = V4L2_MEMORY_MMAP;
     }
+    ~PhysicalCamera() override;
+    
     bool openDevice(const char *, int flags = O_RDWR) override;
 
     // config camera
