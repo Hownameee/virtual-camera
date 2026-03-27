@@ -4,8 +4,12 @@
 #include <cstring>
 #include "bitmap.h"
 
-class WatermarkProcessor : public IProcessor
+class WatermarkFlowProcessor : public IProcessor
 {
+private:
+    long long offsetX = 0;
+    int speed = 40;
+
 public:
     void process(unsigned char *decodedPixels, int width, int height, int channels) override
     {
@@ -17,14 +21,17 @@ public:
         int scaledWidth = bmWidth * scale;
         int scaledHeight = bmHeight * scale;
 
-        int padding = 20;
-        int startX = width - scaledWidth - padding;
-        int startY = height - scaledHeight - padding;
-
-        if (startX < 0)
-            startX = 0;
+        int paddingY = 20;
+        int startY = height - scaledHeight - paddingY;
         if (startY < 0)
             startY = 0;
+
+        offsetX += speed;
+
+        if (offsetX > width)
+            offsetX = -scaledWidth;
+
+        int startX = offsetX;
 
         for (int y = 0; y < bmHeight; y++)
         {
@@ -40,15 +47,17 @@ public:
                         int imgX = startX + x * scale + dx;
                         int imgY = startY + y * scale + dy;
 
-                        if (imgX >= width || imgY >= height)
+                        if (imgX < 0 || imgX >= width || imgY >= height)
                             continue;
 
                         int idx = (imgY * width + imgX) * channels;
 
+                        float alpha = 0.3f;
+
                         for (int c = 0; c < channels; c++)
                         {
-                            int val = decodedPixels[idx + c] + 120;
-                            decodedPixels[idx + c] = (val > 255) ? 255 : val;
+                            decodedPixels[idx + c] =
+                                decodedPixels[idx + c] * (1 - alpha) + 255 * alpha;
                         }
                     }
                 }
