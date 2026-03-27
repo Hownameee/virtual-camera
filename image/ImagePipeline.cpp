@@ -44,6 +44,8 @@ void ImagePipeline::readArgs(int argc, char *argv[])
          { this->addProcessor(new MirrorProcessor()); std::cout << "[INFO] Added Mirror.\n"; }},
         {"--sepia", [this]()
          { this->addProcessor(new SepiaProcessor()); std::cout << "[INFO] Added Sepia.\n"; }},
+        {"--watermark", [this]()
+         { this->addProcessor(new WatermarkProcessor()); std::cout << "[INFO] Added watermark.\n"; }},
         {"--gray", [this]()
          { this->addProcessor(new GrayscaleProcessor()); std::cout << "[INFO] Added Gray.\n"; }}};
 

@@ -14,6 +14,7 @@
 #include "processors/MirrorProcessor.h"
 #include "processors/SepiaProcessor.h"
 #include "processors/GrayscaleProcessor.h"
+#include "processors/WatermarkProcessor.h"
 
 class ImagePipeline
 {
